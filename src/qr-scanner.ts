@@ -366,63 +366,15 @@ class QrScanner {
     static async scanImage(
         imageOrFileOrBlobOrUrl: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement | OffscreenCanvas | ImageBitmap
             | SVGImageElement | File | Blob | URL | String,
-        options: {
-            scanRegion?: QrScanner.ScanRegion | null,
-            qrEngine?: Worker | BarcodeDetector | Promise<Worker | BarcodeDetector> | null,
-            canvas?: HTMLCanvasElement | null,
-            disallowCanvasResizing?: boolean,
-            alsoTryWithoutScanRegion?: boolean,
-            /** just a temporary flag until we switch entirely to the new api */
-            returnDetailedScanResult?: true,
-        },
-    ): Promise<QrScanner.ScanResult>;
-    
-    static async scanImage(
-        imageOrFileOrBlobOrUrl: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement | OffscreenCanvas | ImageBitmap
-            | SVGImageElement | File | Blob | URL | String,
-        scanRegionOrOptions?: QrScanner.ScanRegion | {
-            scanRegion?: QrScanner.ScanRegion | null,
-            qrEngine?: Worker | BarcodeDetector | Promise<Worker | BarcodeDetector> | null,
-            canvas?: HTMLCanvasElement | null,
-            disallowCanvasResizing?: boolean,
-            alsoTryWithoutScanRegion?: boolean,
-            /** just a temporary flag until we switch entirely to the new api */
-            returnDetailedScanResult?: true,
-        } | null,
-        qrEngine?: Worker | BarcodeDetector | Promise<Worker | BarcodeDetector> | null,
-        canvas?: HTMLCanvasElement | null,
-        disallowCanvasResizing: boolean = false,
-        alsoTryWithoutScanRegion: boolean = false,
-    ): Promise<string | QrScanner.ScanResult> {
-        let scanRegion: QrScanner.ScanRegion | null | undefined;
-        let returnDetailedScanResult = false;
-        if (scanRegionOrOptions && (
-            'scanRegion' in scanRegionOrOptions
-            || 'qrEngine' in scanRegionOrOptions
-            || 'canvas' in scanRegionOrOptions
-            || 'disallowCanvasResizing' in scanRegionOrOptions
-            || 'alsoTryWithoutScanRegion' in scanRegionOrOptions
-            || 'returnDetailedScanResult' in scanRegionOrOptions
-        )) {
-            // we got an options object using the new api
-            scanRegion = scanRegionOrOptions.scanRegion;
-            qrEngine = scanRegionOrOptions.qrEngine;
-            canvas = scanRegionOrOptions.canvas;
-            disallowCanvasResizing = scanRegionOrOptions.disallowCanvasResizing || false;
-            alsoTryWithoutScanRegion = scanRegionOrOptions.alsoTryWithoutScanRegion || false;
-            returnDetailedScanResult = true;
-        } else if (scanRegionOrOptions || qrEngine || canvas || disallowCanvasResizing || alsoTryWithoutScanRegion) {
-            console.warn('You\'re using a deprecated api for scanImage which will be removed in the future.');
-        } else {
-            // Only imageOrFileOrBlobOrUrl was specified and we can't distinguish between new or old api usage. For
-            // backwards compatibility we have to assume the old api for now. The options object is marked as non-
-            // optional in the parameter list above to make clear that ScanResult instead of string is only returned if
-            // an options object was provided. However, in the future once legacy support is removed, the options object
-            // should become optional.
-            console.warn('Note that the return type of scanImage will change in the future. To already switch to the '
-                + 'new api today, you can pass returnDetailedScanResult: true.');
-        }
-
+            options: {
+              scanRegion?: QrScanner.ScanRegion | null,
+              qrEngine?: Worker | BarcodeDetector | Promise<Worker | BarcodeDetector> | null,
+              canvas?: HTMLCanvasElement | null,
+              disallowCanvasResizing?: boolean,
+              alsoTryWithoutScanRegion?: boolean
+            } = {}
+    ): Promise<QrScanner.ScanResult> {
+        let { scanRegion, qrEngine, canvas, disallowCanvasResizing = false, alsoTryWithoutScanRegion = false } = options
         const gotExternalEngine = !!qrEngine;
 
         try {
@@ -490,7 +442,7 @@ class QrScanner {
                     (async (): Promise<QrScanner.ScanResult> => {
                         try {
                             const [scanResult] = await qrEngine.detect(canvas!);
-                            if (!scanResult) throw QrScanner.NO_QR_CODE_FOUND;
+                            if (!scanResult) throw new Error(QrScanner.NO_QR_CODE_FOUND);
                             return {
                                 data: scanResult.rawValue,
                                 cornerPoints: QrScanner._convertPoints(scanResult.cornerPoints, scanRegion),
@@ -515,19 +467,19 @@ class QrScanner {
                                     alsoTryWithoutScanRegion,
                                 });
                             }
-                            throw `Scanner error: ${errorMessage}`;
+                            throw new Error(`Scanner error: ${errorMessage}`);
                         }
                     })(),
                 ]);
             }
-            return returnDetailedScanResult ? detailedScanResult : detailedScanResult.data;
+            return detailedScanResult
         } catch (e) {
             if (!scanRegion || !alsoTryWithoutScanRegion) throw e;
             const detailedScanResult = await QrScanner.scanImage(
                 imageOrFileOrBlobOrUrl,
                 { qrEngine, canvas, disallowCanvasResizing },
             );
-            return returnDetailedScanResult ? detailedScanResult : detailedScanResult.data;
+            return detailedScanResult
         } finally {
             if (!gotExternalEngine) {
                 QrScanner._postWorkerMessage(qrEngine!, 'close');

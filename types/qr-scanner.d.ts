@@ -43,14 +43,12 @@ declare class QrScanner {
     stop(): void;
     pause(stopStreamImmediately?: boolean): Promise<boolean>;
     setCamera(facingModeOrDeviceId: QrScanner.FacingMode | QrScanner.DeviceId): Promise<void>;
-    static scanImage(imageOrFileOrBlobOrUrl: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement | OffscreenCanvas | ImageBitmap | SVGImageElement | File | Blob | URL | String, options: {
+    static scanImage(imageOrFileOrBlobOrUrl: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement | OffscreenCanvas | ImageBitmap | SVGImageElement | File | Blob | URL | String, options?: {
         scanRegion?: QrScanner.ScanRegion | null;
         qrEngine?: Worker | BarcodeDetector | Promise<Worker | BarcodeDetector> | null;
         canvas?: HTMLCanvasElement | null;
         disallowCanvasResizing?: boolean;
         alsoTryWithoutScanRegion?: boolean;
-        /** just a temporary flag until we switch entirely to the new api */
-        returnDetailedScanResult?: true;
     }): Promise<QrScanner.ScanResult>;
     setGrayscaleWeights(red: number, green: number, blue: number, useIntegerApproximation?: boolean): void;
     setInversionMode(inversionMode: QrScanner.InversionMode): void;
