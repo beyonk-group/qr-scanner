@@ -1,11 +1,8 @@
-/// <reference types="offscreencanvas" />
 declare class QrScanner {
     static readonly DEFAULT_CANVAS_SIZE = 400;
     static readonly NO_QR_CODE_FOUND = "No QR code found";
     private static _disableBarcodeDetector;
     private static _workerMessageId;
-    /** @deprecated */
-    static set WORKER_PATH(workerPath: string);
     static hasCamera(): Promise<boolean>;
     static listCameras(requestLabels?: boolean): Promise<Array<QrScanner.Camera>>;
     readonly $video: HTMLVideoElement;
@@ -25,7 +22,7 @@ declare class QrScanner {
     private _paused;
     private _flashOn;
     private _destroyed;
-    constructor(video: HTMLVideoElement, onDecode: (result: QrScanner.ScanResult) => void, options: {
+    constructor(video: HTMLVideoElement, onDecode: ((result: QrScanner.ScanResult) => void) | ((result: string) => void), canvasSizeOrOnDecodeErrorOrOptions?: number | ((error: Error | string) => void) | {
         onDecodeError?: (error: Error | string) => void;
         calculateScanRegion?: (video: HTMLVideoElement) => QrScanner.ScanRegion;
         preferredCamera?: QrScanner.FacingMode | QrScanner.DeviceId;
@@ -35,13 +32,7 @@ declare class QrScanner {
         overlay?: HTMLDivElement;
         /** just a temporary flag until we switch entirely to the new api */
         returnDetailedScanResult?: true;
-    });
-    /** @deprecated */
-    constructor(video: HTMLVideoElement, onDecode: (result: string) => void, onDecodeError?: (error: Error | string) => void, calculateScanRegion?: (video: HTMLVideoElement) => QrScanner.ScanRegion, preferredCamera?: QrScanner.FacingMode | QrScanner.DeviceId);
-    /** @deprecated */
-    constructor(video: HTMLVideoElement, onDecode: (result: string) => void, onDecodeError?: (error: Error | string) => void, canvasSize?: number, preferredCamera?: QrScanner.FacingMode | QrScanner.DeviceId);
-    /** @deprecated */
-    constructor(video: HTMLVideoElement, onDecode: (result: string) => void, canvasSize?: number);
+    }, canvasSizeOrCalculateScanRegion?: number | ((video: HTMLVideoElement) => QrScanner.ScanRegion), preferredCamera?: QrScanner.FacingMode | QrScanner.DeviceId);
     hasFlash(): Promise<boolean>;
     isFlashOn(): boolean;
     toggleFlash(): Promise<void>;
@@ -61,13 +52,9 @@ declare class QrScanner {
         /** just a temporary flag until we switch entirely to the new api */
         returnDetailedScanResult?: true;
     }): Promise<QrScanner.ScanResult>;
-    /** @deprecated */
-    static scanImage(imageOrFileOrBlobOrUrl: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement | OffscreenCanvas | ImageBitmap | SVGImageElement | File | Blob | URL | String, scanRegion?: QrScanner.ScanRegion | null, qrEngine?: Worker | BarcodeDetector | Promise<Worker | BarcodeDetector> | null, canvas?: HTMLCanvasElement | null, disallowCanvasResizing?: boolean, alsoTryWithoutScanRegion?: boolean): Promise<string>;
     setGrayscaleWeights(red: number, green: number, blue: number, useIntegerApproximation?: boolean): void;
     setInversionMode(inversionMode: QrScanner.InversionMode): void;
     static createQrEngine(): Promise<Worker | BarcodeDetector>;
-    /** @deprecated */
-    static createQrEngine(workerPath: string): Promise<Worker | BarcodeDetector>;
     private _onPlay;
     private _onLoadedMetaData;
     private _onVisibilityChange;

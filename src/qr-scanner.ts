@@ -4,12 +4,6 @@ class QrScanner {
     private static _disableBarcodeDetector = false;
     private static _workerMessageId = 0;
 
-    /** @deprecated */
-    static set WORKER_PATH(workerPath: string) {
-        console.warn('Setting QrScanner.WORKER_PATH is not required and not supported anymore. '
-            + 'Have a look at the README for new setup instructions.');
-    }
-
     static async hasCamera(): Promise<boolean> {
         try {
             return !!(await QrScanner.listCameras(false)).length;
@@ -73,39 +67,6 @@ class QrScanner {
 
     constructor(
         video: HTMLVideoElement,
-        onDecode: (result: QrScanner.ScanResult) => void,
-        options: {
-            onDecodeError?: (error: Error | string) => void,
-            calculateScanRegion?: (video: HTMLVideoElement) => QrScanner.ScanRegion,
-            preferredCamera?: QrScanner.FacingMode | QrScanner.DeviceId,
-            maxScansPerSecond?: number;
-            highlightScanRegion?: boolean,
-            highlightCodeOutline?: boolean,
-            overlay?: HTMLDivElement,
-            /** just a temporary flag until we switch entirely to the new api */
-            returnDetailedScanResult?: true,
-        },
-    );
-    /** @deprecated */
-    constructor(
-        video: HTMLVideoElement,
-        onDecode: (result: string) => void,
-        onDecodeError?: (error: Error | string) => void,
-        calculateScanRegion?: (video: HTMLVideoElement) => QrScanner.ScanRegion,
-        preferredCamera?: QrScanner.FacingMode | QrScanner.DeviceId,
-    );
-    /** @deprecated */
-    constructor(
-        video: HTMLVideoElement,
-        onDecode: (result: string) => void,
-        onDecodeError?: (error: Error | string) => void,
-        canvasSize?: number,
-        preferredCamera?: QrScanner.FacingMode | QrScanner.DeviceId,
-    );
-    /** @deprecated */
-    constructor(video: HTMLVideoElement, onDecode: (result: string) => void, canvasSize?: number);
-    constructor(
-        video: HTMLVideoElement,
         onDecode: ((result: QrScanner.ScanResult) => void) | ((result: string) => void),
         canvasSizeOrOnDecodeErrorOrOptions?: number | ((error: Error | string) => void) | {
             onDecodeError?: (error: Error | string) => void,
@@ -124,24 +85,7 @@ class QrScanner {
         this.$video = video;
         this.$canvas = document.createElement('canvas');
 
-        if (canvasSizeOrOnDecodeErrorOrOptions && typeof canvasSizeOrOnDecodeErrorOrOptions === 'object') {
-            // we got an options object using the new api
-            this._onDecode = onDecode as QrScanner['_onDecode'];
-        } else {
-            if (canvasSizeOrOnDecodeErrorOrOptions || canvasSizeOrCalculateScanRegion || preferredCamera) {
-                console.warn('You\'re using a deprecated version of the QrScanner constructor which will be removed in '
-                    + 'the future');
-            } else {
-                // Only video and onDecode were specified and we can't distinguish between new or old api usage. For
-                // backwards compatibility we have to assume the old api for now. The options object is marked as non-
-                // optional in the parameter list above to make clear that ScanResult instead of string is only passed
-                // if an options object was provided. However, in the future once legacy support is removed, the options
-                // object should become optional.
-                console.warn('Note that the type of the scan result passed to onDecode will change in the future. '
-                    + 'To already switch to the new api today, you can pass returnDetailedScanResult: true.');
-            }
-            this._legacyOnDecode = onDecode as QrScanner['_legacyOnDecode'];
-        }
+        this._onDecode = onDecode as QrScanner['_onDecode'];        
 
         const options = typeof canvasSizeOrOnDecodeErrorOrOptions === 'object'
             ? canvasSizeOrOnDecodeErrorOrOptions
@@ -305,7 +249,7 @@ class QrScanner {
         this._flashOn = true;
         if (!this._active || this._paused) return; // flash will be turned on later on .start()
         try {
-            if (!await this.hasFlash()) throw 'No flash available';
+            if (!await this.hasFlash()) throw new Error('No flash available');
             // Note that the video track is guaranteed to exist and to be a MediaStream due to the check in hasFlash
             await (this.$video.srcObject as MediaStream).getVideoTracks()[0].applyConstraints({
                 // @ts-ignore: constraint 'torch' is unknown to ts
@@ -432,16 +376,7 @@ class QrScanner {
             returnDetailedScanResult?: true,
         },
     ): Promise<QrScanner.ScanResult>;
-    /** @deprecated */
-    static async scanImage(
-        imageOrFileOrBlobOrUrl: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement | OffscreenCanvas | ImageBitmap
-            | SVGImageElement | File | Blob | URL | String,
-        scanRegion?: QrScanner.ScanRegion | null,
-        qrEngine?: Worker | BarcodeDetector | Promise<Worker | BarcodeDetector> | null,
-        canvas?: HTMLCanvasElement | null,
-        disallowCanvasResizing?: boolean,
-        alsoTryWithoutScanRegion?: boolean,
-    ): Promise<string>;
+    
     static async scanImage(
         imageOrFileOrBlobOrUrl: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement | OffscreenCanvas | ImageBitmap
             | SVGImageElement | File | Blob | URL | String,
@@ -616,14 +551,7 @@ class QrScanner {
         QrScanner._postWorkerMessage(this._qrEnginePromise, 'inversionMode', inversionMode);
     }
 
-    static async createQrEngine(): Promise<Worker | BarcodeDetector>;
-    /** @deprecated */
-    static async createQrEngine(workerPath: string): Promise<Worker | BarcodeDetector>;
-    static async createQrEngine(workerPath?: string): Promise<Worker | BarcodeDetector> {
-        if (workerPath) {
-            console.warn('Specifying a worker path is not required and not supported anymore.');
-        }
-
+    static async createQrEngine(): Promise<Worker | BarcodeDetector> {
         // @ts-ignore no types defined for import
         const createWorker = () => (import('./qr-scanner-worker.min.js') as Promise<{ createWorker: () => Worker }>)
             .then((module) => module.createWorker());
@@ -634,24 +562,6 @@ class QrScanner {
             && (await BarcodeDetector.getSupportedFormats()).includes('qr_code');
 
         if (!useBarcodeDetector) return createWorker();
-
-        // On Macs with an M1/M2 processor and macOS Ventura (macOS version 13), the BarcodeDetector is broken in
-        // Chromium based browsers, regardless of the version. For that constellation, the BarcodeDetector does not
-        // error but does not detect QR codes. Macs without an M1/M2 or before Ventura are fine.
-        // See issue #209 and https://bugs.chromium.org/p/chromium/issues/detail?id=1382442
-        // TODO update this once the issue in macOS is fixed
-        const userAgentData = navigator.userAgentData;
-        const isChromiumOnMacWithArmVentura = userAgentData // all Chromium browsers support userAgentData
-            && userAgentData.brands.some(({ brand }) => /Chromium/i.test(brand))
-            && /mac ?OS/i.test(userAgentData.platform)
-            // Does it have an ARM chip (e.g. M1/M2) and Ventura? Check this last as getHighEntropyValues can
-            // theoretically trigger a browser prompt, although no browser currently does seem to show one.
-            // If browser or user refused to return the requested values, assume broken ARM Ventura, to be safe.
-            && await userAgentData.getHighEntropyValues(['architecture', 'platformVersion'])
-                .then(({ architecture, platformVersion }) =>
-                    /arm/i.test(architecture || 'arm') && parseInt(platformVersion || '13') >= /* Ventura */ 13)
-                .catch(() => true);
-        if (isChromiumOnMacWithArmVentura) return createWorker();
 
         return new BarcodeDetector({ formats: ['qr_code'] });
     }
@@ -875,7 +785,7 @@ class QrScanner {
     }
 
     private async _getCameraStream(): Promise<{ stream: MediaStream, facingMode: QrScanner.FacingMode }> {
-        if (!navigator.mediaDevices) throw 'Camera not found.';
+        if (!navigator.mediaDevices) throw new Error('Camera not found.');
 
         const preferenceType = /^(environment|user)$/.test(this._preferredCamera)
             ? 'facingMode'
@@ -907,7 +817,7 @@ class QrScanner {
             } catch (e) {}
         }
 
-        throw 'Camera not found.';
+        throw new Error('Camera not found.');
     }
 
     private async _restartVideoStream(): Promise<void> {
@@ -1018,7 +928,7 @@ class QrScanner {
                 }
             }
         } else {
-            throw 'Unsupported image type.';
+            throw new Error('Unsupported image type.');
         }
     }
 
