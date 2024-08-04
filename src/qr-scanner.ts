@@ -75,9 +75,7 @@ class QrScanner {
             maxScansPerSecond?: number;
             highlightScanRegion?: boolean,
             highlightCodeOutline?: boolean,
-            overlay?: HTMLDivElement,
-            /** just a temporary flag until we switch entirely to the new api */
-            returnDetailedScanResult?: true,
+            overlay?: HTMLDivElement
         },
         canvasSizeOrCalculateScanRegion?: number | ((video: HTMLVideoElement) => QrScanner.ScanRegion),
         preferredCamera?: QrScanner.FacingMode | QrScanner.DeviceId,
