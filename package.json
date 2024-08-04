@@ -48,13 +48,11 @@
     "@ampproject/rollup-plugin-closure-compiler": "^0.27.0",
     "@rollup/plugin-alias": "^3.1.9",
     "@rollup/plugin-typescript": "^8.3.0",
-    "acorn": "^8.7.0",
-    "google-closure-compiler": "^20220104.0.0",
     "jsqr-es6": "^1.4.0-1",
     "rollup": "^2.21.0",
     "rollup-plugin-sourcemaps": "^0.6.2",
     "tslib": "^2.3.1",
     "typescript": "^4.5.5"
   },
-  "packageManager": "pnpm@8.15.8+sha256.691fe176eea9a8a80df20e4976f3dfb44a04841ceb885638fe2a26174f81e65e"
+  "packageManager": "pnpm@8.15.8"
 }
